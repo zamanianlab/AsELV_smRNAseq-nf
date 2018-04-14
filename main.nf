@@ -82,7 +82,7 @@ process build_bowtie_index {
 
     """
         zcat reference.fa.gz > reference.fa
-        bowtie-build --threads ${large_core} reference.fa ref_bowtie
+        bowtie-build reference.fa ref_bowtie
     """
 }
 
