@@ -121,7 +121,7 @@ process align {
         file bwaindex from bwa_indices.first()
 
     output:
-        set val(strain_id), val(phosphate_id), file("${fa_prefix}.bam"), file("${fa_prefix}.bam.bai") into bwa_bams
+        set val(fa_prefix), file("${fa_prefix}.bam"), file("${fa_prefix}.bam.bai") into bwa_bams
 
     script:
         fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
@@ -135,6 +135,7 @@ process align {
         samtools index -b ${fa_prefix}.bam
         """
 }
+
 
 
 
