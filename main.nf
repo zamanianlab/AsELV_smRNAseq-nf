@@ -36,6 +36,8 @@ process fetch_reference {
 
     """
 }
+reference.into {reference_bwa, reference_bowtie}
+
 
 log.info """\
          Parasite smRNA-Seq pipeline:
@@ -44,12 +46,14 @@ log.info """\
          """
          .stripIndent()
 
+
+
 //TRIM READS
 process trimmomatic {
     cpus large_core
     tag { name }
 
-    publishDir "output/", mode: 'copy', pattern: '_trimout.txt'
+    publishDir "output/", mode: 'copy', pattern: '*_trimout.txt'
 
     input:
         set val(name), file(reads) from fq_set
@@ -67,6 +71,26 @@ process trimmomatic {
 }
 
 
+//INDEX GENOME - BWA
+process build_bwa_index {
+
+    publishDir "${output}/reference/", mode: 'copy'
+
+    cpus large_core
+
+    input:
+        file("reference.fa.gz") from reference_bwa
+
+    output:
+        file "reference.*" into bwa_indices
+
+    """
+        zcat reference.fa.gz > reference.fa
+        bwa index reference.fa
+    """
+}
+
+
 //INDEX GENOME - BOWTIE
 process build_bowtie_index {
 
@@ -75,7 +99,7 @@ process build_bowtie_index {
     cpus large_core
 
     input:
-        file("reference.fa.gz") from reference
+        file("reference.fa.gz") from reference_bowtie
 
     output:
         file "*.ebwt" into bowtie_indices
@@ -87,26 +111,33 @@ process build_bowtie_index {
 }
 
 
+// ALIGN TRIMMED READS TO GENOME (BWA)
+process align {
+    cpus large_core
+    tag { reads }
+
+    input:
+        file reads from fq_trim
+        file bwaindex from bwa_indices.first()
+
+    output:
+        set val(strain_id), val(phosphate_id), file("${fa_prefix}.bam"), file("${fa_prefix}.bam.bai") into bwa_bams
+
+    script:
+        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
+
+        """
+        bwa aln -o 0 -n 0 -t ${large_core} reference.fa ${reads} > ${fa_prefix}.sai
+        bwa samse reference.fa ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
+        samtools view -bS ${fa_prefix}.sam > ${fa_prefix}.unsorted.bam
+        samtools flagstat ${fa_prefix}.unsorted.bam
+        samtools sort -@ ${large_core} -o ${fa_prefix}.bam ${fa_prefix}.unsorted.bam
+        samtools index -b ${fa_prefix}.bam
+        """
+}
 
 
 
-
-// Get pre-indexed hisat2 reference for mouse genome - DONE MANUALLY
-//mm_HS2_genome="ftp://ftp.ccb.jhu.edu/pub/infphilo/hisat2/data/grcm38.tar.gz"
-//mm_HS2_genometran="ftp://ftp.ccb.jhu.edu/pub/infphilo/hisat2/data/grcm38_tran.tar.gz"
-//manually run in ${data}/reference:
-//curl ftp://ftp.ccb.jhu.edu/pub/infphilo/hisat2/data/grcm38_tran.tar.gz > grcm38_tran.tar.gz
-//tar -zxvf grcm38_tran.tar.gz
-
-//load indexes
-// hs2_indices = Channel.fromPath(data + '/reference/grcm38_tran/*.ht2') //.println()
-
-// ** - Fetch reference genome (fa.gz) and gene annotation file (gtf.gz) - DONE MANUALLY
-//mm_genome="ftp://ftp.ensembl.org/pub/release-91/fasta/mus_musculus/dna/Mus_musculus.GRCm38.dna.primary_assembly.fa.gz"
-//mm_gtf="ftp://ftp.ensembl.org/pub/release-91/gtf/mus_musculus/Mus_musculus.GRCm38.91.gtf.gz"
-//curl ${mm_gtf} > geneset.gtf.gz
-
-// mm_gtf = file("${data}/reference/geneset.gtf.gz")
 
 
 //** - ALIGNMENT AND STRINGTIE (combined)
