@@ -56,31 +56,35 @@ process trimmomatic {
 
     output:
         file(name_out) into fq_trim
-        file(trimmomatic_output) into trim_log
+        file("*_trimout.txt") into trim_log
 
     script:
     name_out = name.replace('.fastq.gz', '_trim.fq.gz')
+
     """
         trimmomatic SE -phred33 -threads ${large_core} ${reads} ${name_out} ILLUMINACLIP:${adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:15 &> ${reads}_trimout.txt
     """
 }
 
 
-//CB genome headers require clipping of extraneous chromosome length information
-// process bwa_index_CB {
-//     cpus small_core
-//     tag { name }
-//     input:
-//         file("reference.fa.gz") from reference
-//     output:
-//        file "CB_reference.*" into ref_bowtie
-//     """ 
-//         zcat CB_reference.fa.gz | awk '{print \$1; }' > CB_reference.fa
-//         bwa index CB_reference.fa
-//     """
-// }
-//CB_bwaindex.into { CB_bwaindex_1; CB_bwaindex_21 }
+//INDEX GENOME - BOWTIE
+process build_bowtie_index {
 
+    publishDir "${output}/reference/", mode: 'copy'
+
+    cpus large_core
+
+    input:
+        file("reference.fa.gz") from reference
+
+    output:
+        file "*.ebwt" into bowtie_indices
+
+    """
+        zcat reference.fa.gz > reference.fa
+        bowtie-build --threads ${large_core} reference.fa ref_bowtie
+    """
+}
 
 
 
