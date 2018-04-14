@@ -36,7 +36,7 @@ process fetch_reference {
 
     """
 }
-reference.into {reference_bwa, reference_bowtie}
+reference.into { reference_bwa; reference_bowtie }
 
 
 log.info """\
