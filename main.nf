@@ -9,13 +9,67 @@ output=config.output_location
 large_core=config.large_core
 small_core=config.small_core
 
-// ** - Get txt file of SRA accession IDs from 'auxillary' folder
-//sra_file = Channel.fromPath(aux + "SampleIDs.txt")
-
 
 // Fetch fqs; alternative suffixes
-Channel.fromFilePairs(data + 'reads/raw_data/*_R{1,2}_001.fastq.gz', flat: true)
-        .into { read_pairs }
+fq_set = Channel.fromPath(data_location + "reads/*.fastq.gz")
+                .map { n -> [ n.getName(), n ] }
+
+
+// ** - Fetch reference genome (fa.gz) and gene annotation file (gtf.gz)
+release="WBPS9"
+species="ascaris_suum"
+prjn="PRJNA62057"
+prefix="ftp://ftp.ebi.ac.uk/pub/databases/wormbase/parasite/releases/${release}/species/${species}/${prjn}"
+
+process fetch_reference {
+
+    publishDir "${output}/reference/", mode: 'copy'
+    
+    output:
+        file("reference.fa.gz") into reference_hisat
+
+    """
+        echo '${prefix}'
+        curl ${prefix}/${species}.${prjn}.${release}.genomic.fa.gz > reference.fa.gz
+
+    """
+}
+
+log.info """\
+         Parasite smRNA-Seq pipeline:
+         transcriptome: ${ prefix }
+         fqs          : ${ fq_set }
+         """
+         .stripIndent()
+
+
+// transcriptome_file = file(params.transcriptome)
+// multiqc_file = file(params.multiqc)
+// exp_file = file(params.experiment)
+
+
+// TRIM READS
+// process trim {
+
+//     tag { fq_id }
+
+//     publishDir "${data}/fq_trim/", mode: 'move'
+
+//     input:
+//         set fq_id, file(forward), file(reverse) from read_pairs
+
+//     output:
+//         set file("${fq_id}_1P.fq.gz"), file("${fq_id}_2P.fq.gz") into trim_output
+//         //file "${fq_id}.trim_log.txt" into trim_logs
+
+//     """
+//     trimmomatic PE -threads ${large_core} $forward $reverse -baseout ${fq_id}.fq.gz ILLUMINACLIP:/home/linuxbrew/.linuxbrew/Cellar/trimmomatic/0.36/share/trimmomatic/adapters/TruSeq3-PE.fa:2:80:10 MINLEN:75 
+//     rm ${fq_id}_1U.fq.gz
+//     rm ${fq_id}_2U.fq.gz
+//     """
+
+// }
+
 
 
 // Get pre-indexed hisat2 reference for mouse genome - DONE MANUALLY
@@ -26,14 +80,14 @@ Channel.fromFilePairs(data + 'reads/raw_data/*_R{1,2}_001.fastq.gz', flat: true)
 //tar -zxvf grcm38_tran.tar.gz
 
 //load indexes
-hs2_indices = Channel.fromPath(data + '/reference/grcm38_tran/*.ht2') //.println()
+// hs2_indices = Channel.fromPath(data + '/reference/grcm38_tran/*.ht2') //.println()
 
 // ** - Fetch reference genome (fa.gz) and gene annotation file (gtf.gz) - DONE MANUALLY
 //mm_genome="ftp://ftp.ensembl.org/pub/release-91/fasta/mus_musculus/dna/Mus_musculus.GRCm38.dna.primary_assembly.fa.gz"
 //mm_gtf="ftp://ftp.ensembl.org/pub/release-91/gtf/mus_musculus/Mus_musculus.GRCm38.91.gtf.gz"
 //curl ${mm_gtf} > geneset.gtf.gz
 
-mm_gtf = file("${data}/reference/geneset.gtf.gz")
+// mm_gtf = file("${data}/reference/geneset.gtf.gz")
 
 
 //** - ALIGNMENT AND STRINGTIE (combined)
@@ -76,25 +130,25 @@ mm_gtf = file("${data}/reference/geneset.gtf.gz")
 
 
 //comment out until all else finished
-prepDE = file("${aux}/scripts/prepDE.py")
+// prepDE = file("${aux}/scripts/prepDE.py")
 
-process stringtie_table_counts {
+// process stringtie_table_counts {
 
-    echo true
+//     echo true
 
-    publishDir "${output}/diffexp", mode: 'copy'
+//     publishDir "${output}/diffexp", mode: 'copy'
 
-    cpus small_core
+//     cpus small_core
 
-    output:
-        file ("gene_count_matrix.csv") into gene_count_matrix
-        file ("transcript_count_matrix.csv") into transcript_count_matrix
+//     output:
+//         file ("gene_count_matrix.csv") into gene_count_matrix
+//         file ("transcript_count_matrix.csv") into transcript_count_matrix
 
-    """
-        python ${prepDE} -i ${output}/expression -l 140 -g gene_count_matrix.csv -t transcript_count_matrix.csv
+//     """
+//         python ${prepDE} -i ${output}/expression -l 140 -g gene_count_matrix.csv -t transcript_count_matrix.csv
 
-    """
-}
+//     """
+// }
 
 
 
