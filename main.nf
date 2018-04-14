@@ -14,6 +14,8 @@ small_core=config.small_core
 fq_set = Channel.fromPath(data + "reads/*.fastq.gz")
                 .map { n -> [ n.getName(), n ] }
 
+// Other files and parameters
+adapters = file("auxillary/TruSeq3-SE.fa")
 
 // ** - Fetch reference genome (fa.gz) and gene annotation file (gtf.gz)
 release="WBPS9"
@@ -26,7 +28,7 @@ process fetch_reference {
     publishDir "${output}/reference/", mode: 'copy'
     
     output:
-        file("reference.fa.gz") into reference_hisat
+        file("reference.fa.gz") into reference
 
     """
         echo '${prefix}'
@@ -42,33 +44,40 @@ log.info """\
          """
          .stripIndent()
 
+//TRIM READS
+process trimmomatic {
+    cpus small_core
+    tag { name }
+    input:
+        set val(name), file(reads) from fq_set
+    output:
+        file(name_out) into fq_trim
+    script:
+    name_out = name.replace('.fastq.gz', '_trim.fq.gz')
+    """
+        trimmomatic SE -phred33 -threads ${small_core} ${reads} ${name_out} ILLUMINACLIP:${adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:15 
+    """
+}
 
-// transcriptome_file = file(params.transcriptome)
-// multiqc_file = file(params.multiqc)
-// exp_file = file(params.experiment)
 
-
-// TRIM READS
-// process trim {
-
-//     tag { fq_id }
-
-//     publishDir "${data}/fq_trim/", mode: 'move'
-
+//CB genome headers require clipping of extraneous chromosome length information
+// process bwa_index_CB {
+//     cpus small_core
+//     tag { name }
 //     input:
-//         set fq_id, file(forward), file(reverse) from read_pairs
-
+//         file("reference.fa.gz") from reference
 //     output:
-//         set file("${fq_id}_1P.fq.gz"), file("${fq_id}_2P.fq.gz") into trim_output
-//         //file "${fq_id}.trim_log.txt" into trim_logs
-
+//        file "CB_reference.*" into ref_bowtie
+//     """ 
+//         zcat CB_reference.fa.gz | awk '{print \$1; }' > CB_reference.fa
+//         bwa index CB_reference.fa
 //     """
-//     trimmomatic PE -threads ${large_core} $forward $reverse -baseout ${fq_id}.fq.gz ILLUMINACLIP:/home/linuxbrew/.linuxbrew/Cellar/trimmomatic/0.36/share/trimmomatic/adapters/TruSeq3-PE.fa:2:80:10 MINLEN:75 
-//     rm ${fq_id}_1U.fq.gz
-//     rm ${fq_id}_2U.fq.gz
-//     """
-
 // }
+//CB_bwaindex.into { CB_bwaindex_1; CB_bwaindex_21 }
+
+
+
+
 
 
 
