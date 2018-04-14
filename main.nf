@@ -46,16 +46,22 @@ log.info """\
 
 //TRIM READS
 process trimmomatic {
-    cpus small_core
+    cpus large_core
     tag { name }
+
+    publishDir "output/", mode: 'copy', pattern: '_trimout.txt'
+
     input:
         set val(name), file(reads) from fq_set
+
     output:
         file(name_out) into fq_trim
+        file(trimmomatic_output) into trim_log
+
     script:
     name_out = name.replace('.fastq.gz', '_trim.fq.gz')
     """
-        trimmomatic SE -phred33 -threads ${small_core} ${reads} ${name_out} ILLUMINACLIP:${adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:15 
+        trimmomatic SE -phred33 -threads ${large_core} ${reads} ${name_out} ILLUMINACLIP:${adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:15 &> ${reads}_trimout.txt
     """
 }
 
