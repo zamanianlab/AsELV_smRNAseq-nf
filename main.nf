@@ -11,7 +11,7 @@ small_core=config.small_core
 
 
 // Fetch fqs; alternative suffixes
-fq_set = Channel.fromPath(data_location + "reads/*.fastq.gz")
+fq_set = Channel.fromPath(data + "reads/*.fastq.gz")
                 .map { n -> [ n.getName(), n ] }
 
 
