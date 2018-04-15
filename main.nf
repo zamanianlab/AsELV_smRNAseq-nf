@@ -233,9 +233,9 @@ process mirDeep2_pl {
 
 
         """
-        zcat reference.fa.gz > reference_temp.fa
-        cat reference_temp.fa | awk '{print $1}' > reference.fa
-        miRDeep2.pl ${reads_collapsed} reference.fa ${reads_vs_genome_arf} ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
+        zcat reference.fa.gz > reference.fa
+        cat reference.fa | awk '{print $1}' > reference_temp.fa
+        miRDeep2.pl ${reads_collapsed} reference_temp.fa ${reads_vs_genome_arf} ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
         """
 }
 
