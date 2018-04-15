@@ -238,7 +238,8 @@ process mirDeep2_pl {
 
         """
         zcat reference.fa.gz > reference.fa
-        miRDeep2.pl ${reads} reference.fa ${fa_prefix}_map.arf ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
+        zcat ${reads} > ${fa_prefix}.fa
+        miRDeep2.pl ${fa_prefix}.fa reference.fa ${fa_prefix}_map.arf ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
         """
 }
 
