@@ -231,9 +231,6 @@ process mirDeep2_pl {
         file("reference.fa.gz") from reference_mirdeep
         file reads_collapsed from reads_collapsed
 
-    output:
-
-    script:
 
         """
         zcat reference.fa.gz > reference_temp.fa
