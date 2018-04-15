@@ -39,7 +39,7 @@ process fetch_reference {
 
     """
 }
-reference.into { reference_bwa; reference_bowtie }
+reference.into { reference_bwa; reference_bowtie; reference_mirdeep }
 
 
 log.info """\
@@ -72,6 +72,8 @@ process trimmomatic {
         trimmomatic SE -phred33 -threads ${large_core} ${reads} ${name_out} ILLUMINACLIP:${adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:15 &> ${reads}_trimout.txt
     """
 }
+fq_trim.into { fq_trim1; fq_trim2; fqtrim3 }
+
 
 
 //INDEX GENOME - BWA
@@ -94,6 +96,7 @@ process build_bwa_index {
 }
 
 
+
 //INDEX GENOME - BOWTIE
 process build_bowtie_index {
 
@@ -114,13 +117,14 @@ process build_bowtie_index {
 }
 
 
+
 // ALIGN TRIMMED READS TO GENOME (BWA)
 process align {
     cpus large_core
     tag { reads }
 
     input:
-        file reads from fq_trim
+        file reads from fq_trim1
         file bwaindex from bwa_indices.first()
 
     output:
@@ -140,7 +144,59 @@ process align {
 }
 
 
+// Map rRNAs
+process map_rRNAs {
+    cpus large_core
+    tag { reads }
 
+    input:
+        file reads from fq_trim2
+        file rRNA_fa from rRNAs
+
+    output:
+        set val(fa_prefix), file("${fa_prefix}_rRNA.bam"), file("${fa_prefix}_rRNA.bam.bai") into bwa_rRNA_bams
+
+    script:
+        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
+
+        """
+        bwa index ascaris_suum_rRNA.fasta
+
+        bwa aln -o 0 -n 0 -t ${large_core} ${rRNA_fa} ${reads} > ${fa_prefix}.sai
+        bwa samse reference.fa ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
+        samtools view -bS ${fa_prefix}.sam > ${fa_prefix}.unsorted.bam
+        samtools flagstat ${fa_prefix}.unsorted.bam
+        samtools sort -@ ${large_core} -o ${fa_prefix}_rRNA.bam ${fa_prefix}.unsorted.bam
+        samtools index -b ${fa_prefix}_rRNA.bam
+        """
+}
+
+// Map tRNAs
+process map_tRNAs {
+    cpus large_core
+    tag { reads }
+
+    input:
+        file reads from fq_trim3
+        file tRNA_fa from tRNAs
+
+    output:
+        set val(fa_prefix), file("${fa_prefix}_tRNA.bam"), file("${fa_prefix}_tRNA.bam.bai") into bwa_tRNA_bams
+
+    script:
+        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
+
+        """
+        bwa index ${tRNA_fa}
+
+        bwa aln -o 0 -n 0 -t ${large_core} ${tRNA_fa} ${reads} > ${fa_prefix}.sai
+        bwa samse reference.fa ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
+        samtools view -bS ${fa_prefix}.sam > ${fa_prefix}.unsorted.bam
+        samtools flagstat ${fa_prefix}.unsorted.bam
+        samtools sort -@ ${large_core} -o ${fa_prefix}_tRNA.bam ${fa_prefix}.unsorted.bam
+        samtools index -b ${fa_prefix}_tRNA.bam
+        """
+}
 
 
 
