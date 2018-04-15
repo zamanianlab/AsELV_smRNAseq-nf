@@ -5,6 +5,7 @@
 aux=config.aux_location
 data=config.data_location
 output=config.output_location
+GHdata=config.GHdata_location
 
 large_core=config.large_core
 small_core=config.small_core
