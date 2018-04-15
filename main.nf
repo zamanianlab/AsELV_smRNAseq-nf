@@ -73,7 +73,7 @@ process trimmomatic {
         trimmomatic SE -phred33 -threads ${large_core} ${reads} ${name_out} ILLUMINACLIP:${adapters}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:15 &> ${reads}_trimout.txt
     """
 }
-fq_trim.into { fq_trim1; fq_trim2; fqtrim3 }
+fq_trim.into { fq_trim1; fq_trim2; fq_trim3 }
 
 
 
