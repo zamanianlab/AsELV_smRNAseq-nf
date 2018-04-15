@@ -227,7 +227,7 @@ process mirDeep2_pl {
     tag { reads }
 
     input:
-        file("${fa_prefix}_map.arf") from reads_vs_genome_arf
+        file reads_vs_genome_arf from reads_vs_genome_arf
         file("reference.fa.gz") from reference_mirdeep
         file reads_collapsed from reads_collapsed
 
@@ -237,7 +237,7 @@ process mirDeep2_pl {
 
         """
         zcat reference.fa.gz > reference.fa
-        miRDeep2.pl ${reads_collapsed} reference.fa ${fa_prefix}_map.arf ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
+        miRDeep2.pl ${reads_collapsed} reference.fa ${reads_vs_genome_arf} ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
         """
 }
 
