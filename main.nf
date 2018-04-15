@@ -16,6 +16,9 @@ fq_set = Channel.fromPath(data + "reads/*.fastq.gz")
 
 // Other files and parameters
 adapters = file("auxillary/TruSeq3-SE.fa")
+rRNAs = file(GHdata + "smRNA/rRNA/ascaris_suum_rRNA.fasta")
+tRNAs = file(GHdata + "smRNA/tRNA/ascaris_suum_tRNA.fasta")
+miRNAs = file(GHdata + "smRNA/miRNA/ascaris_suum_tRNA.fasta")
 
 // ** - Fetch reference genome (fa.gz) and gene annotation file (gtf.gz)
 release="WBPS9"
