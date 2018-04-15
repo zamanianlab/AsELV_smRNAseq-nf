@@ -213,7 +213,8 @@ process mirDeep2_mapper {
         fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
 
         """
-        mapper.pl ${reads} -e -h -j -l 18 -m -p ref_bowtie -s ${fa_prefix}_collapsed.fa -t ${fa_prefix}_map.arf -v
+        zcat ${reads} > ${fa_prefix}.fa
+        mapper.pl ${fa_prefix}.fa -e -h -j -l 18 -m -p ref_bowtie -s ${fa_prefix}_collapsed.fa -t ${fa_prefix}_map.arf -v
         """
 }
 
