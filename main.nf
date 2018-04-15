@@ -19,7 +19,10 @@ fq_set = Channel.fromPath(data + "reads/*.fastq.gz")
 adapters = file("auxillary/TruSeq3-SE.fa")
 rRNAs = file(GHdata + "smRNA/rRNA/ascaris_suum_rRNA.fasta")
 tRNAs = file(GHdata + "smRNA/tRNA/ascaris_suum_tRNA.fasta")
-miRNAs = file(GHdata + "smRNA/miRNA/ascaris_suum_tRNA.fasta")
+as_miRNAs_mature = file(GHdata + "smRNA/miRNA/ascaris_suum_mature.fasta")
+as_miRNAs_prec = file(GHdata + "smRNA/miRNA/ascaris_suum_stemloop.fasta")
+ce_miRNAs_mature = file(GHdata + "smRNA/miRNA/caenorhabditis_elegans_mature.fasta")
+ce_miRNAs_prec = file(GHdata + "smRNA/miRNA/caenorhabditis_elegans_stemloop.fasta")
 
 // ** - Fetch reference genome (fa.gz) and gene annotation file (gtf.gz)
 release="WBPS9"
@@ -121,6 +124,8 @@ process build_bowtie_index {
 
 // ALIGN TRIMMED READS TO GENOME (BWA)
 process align {
+    publishDir "${output}/stats/", mode: 'copy'
+
     cpus large_core
     tag { reads }
 
@@ -129,7 +134,7 @@ process align {
         file bwaindex from bwa_indices.first()
 
     output:
-        set val(fa_prefix), file("${fa_prefix}.bam"), file("${fa_prefix}.bam.bai") into bwa_bams
+        file("bwa_align.txt") into bwa_alignstats
 
     script:
         fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
@@ -141,27 +146,34 @@ process align {
         samtools flagstat ${fa_prefix}.unsorted.bam
         samtools sort -@ ${large_core} -o ${fa_prefix}.bam ${fa_prefix}.unsorted.bam
         samtools index -b ${fa_prefix}.bam
+        samtools flagstat ${fa_prefix}.bam > bwa_align.txt
         """
 }
 
 
-// Map rRNAs
-process map_rRNAs {
+
+
+// Map rRNAs and tRNAs
+process map_rRNAs_tRNAs {
+    publishDir "${output}/stats/", mode: 'copy'
+
     cpus large_core
     tag { reads }
 
     input:
         file reads from fq_trim2
         file rRNA_fa from rRNAs
+        file tRNA_fa from tRNAs
 
     output:
-        set val(fa_prefix), file("${fa_prefix}_rRNA.bam"), file("${fa_prefix}_rRNA.bam.bai") into bwa_rRNA_bams
+        file("bwa_rRNA_align.txt") into bwa_rRNA_alignstats
+        file("bwa_tRNA_align.txt") into bwa_tRNA_alignstats
 
     script:
         fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
 
         """
-        bwa index ascaris_suum_rRNA.fasta
+        bwa index ${rRNA_fa}
 
         bwa aln -o 0 -n 0 -t ${large_core} ${rRNA_fa} ${reads} > ${fa_prefix}.sai
         bwa samse ${rRNA_fa} ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
@@ -169,25 +181,8 @@ process map_rRNAs {
         samtools flagstat ${fa_prefix}.unsorted.bam
         samtools sort -@ ${large_core} -o ${fa_prefix}_rRNA.bam ${fa_prefix}.unsorted.bam
         samtools index -b ${fa_prefix}_rRNA.bam
-        """
-}
+        samtools flagstat ${fa_prefix}_rRNA.bam > bwa_rRNA_align.txt
 
-// Map tRNAs
-process map_tRNAs {
-    cpus large_core
-    tag { reads }
-
-    input:
-        file reads from fq_trim3
-        file tRNA_fa from tRNAs
-
-    output:
-        set val(fa_prefix), file("${fa_prefix}_tRNA.bam"), file("${fa_prefix}_tRNA.bam.bai") into bwa_tRNA_bams
-
-    script:
-        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
-
-        """
         bwa index ${tRNA_fa}
 
         bwa aln -o 0 -n 0 -t ${large_core} ${tRNA_fa} ${reads} > ${fa_prefix}.sai
@@ -196,6 +191,31 @@ process map_tRNAs {
         samtools flagstat ${fa_prefix}.unsorted.bam
         samtools sort -@ ${large_core} -o ${fa_prefix}_tRNA.bam ${fa_prefix}.unsorted.bam
         samtools index -b ${fa_prefix}_tRNA.bam
+        samtools flagstat ${fa_prefix}_tRNA.bam > bwa_tRNA_align.txt
+
+        """
+}
+
+
+
+//miRDeep2.pl reads.fa /sb/project/hpt-060-aa/BrugiaSRNA/Genome/b_malayi.fa reads_vs_genome.arf /sb/project/hpt-060-aa/BrugiaSRNA/miRbase/brugia_mature.fa /sb/project/hpt-060-aa/BrugiaSRNA/miRbase/othernema_mature.fa /sb/project/hpt-060-aa/BrugiaSRNA/miRbase/brugia_precursors.fa -P
+
+// Mirdeep2 mapper
+process mirDeep2_mapper {
+    cpus large_core
+    tag { reads }
+
+    input:
+        file reads from fq_trim3
+        file bowtieindex from bowtie_indices.first()
+
+    output:
+
+    script:
+        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
+
+        """
+        miRdeep2.pl ${reads} ${bowtieindex} reads_vs_genome.arf ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
         """
 }
 
