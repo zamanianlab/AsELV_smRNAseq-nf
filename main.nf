@@ -164,7 +164,7 @@ process map_rRNAs {
         bwa index ascaris_suum_rRNA.fasta
 
         bwa aln -o 0 -n 0 -t ${large_core} ${rRNA_fa} ${reads} > ${fa_prefix}.sai
-        bwa samse reference.fa ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
+        bwa samse ${rRNA_fa} ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
         samtools view -bS ${fa_prefix}.sam > ${fa_prefix}.unsorted.bam
         samtools flagstat ${fa_prefix}.unsorted.bam
         samtools sort -@ ${large_core} -o ${fa_prefix}_rRNA.bam ${fa_prefix}.unsorted.bam
@@ -191,7 +191,7 @@ process map_tRNAs {
         bwa index ${tRNA_fa}
 
         bwa aln -o 0 -n 0 -t ${large_core} ${tRNA_fa} ${reads} > ${fa_prefix}.sai
-        bwa samse reference.fa ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
+        bwa samse ${tRNA_fa} ${fa_prefix}.sai ${reads} > ${fa_prefix}.sam
         samtools view -bS ${fa_prefix}.sam > ${fa_prefix}.unsorted.bam
         samtools flagstat ${fa_prefix}.unsorted.bam
         samtools sort -@ ${large_core} -o ${fa_prefix}_tRNA.bam ${fa_prefix}.unsorted.bam
