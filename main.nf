@@ -197,8 +197,8 @@ process map_rRNAs_tRNAs {
 }
 
 
-//mapper.pl L3-q2.fq -e -h -j -l 18 -m -p /sb/project/hpt-060-aa/BrugiaSRNA/Genome/b_malayi -s collapsed-L3.fa -t L3-map.arf -v
-// Mirdeep2 mapper
+
+// Mirdeep2 mapper.pl
 process mirDeep2_mapper {
     cpus large_core
     tag { reads }
@@ -208,6 +208,8 @@ process mirDeep2_mapper {
         file bowtieindex from bowtie_indices.first()
 
     output:
+        file("${fa_prefix}_map.arf") into reads_vs_genome_arf
+        file reads into fq_trim4
 
     script:
         fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
@@ -219,27 +221,26 @@ process mirDeep2_mapper {
 }
 
 
+// Mirdeep2 mirdeep2.pl
+process mirDeep2_pl {
+    cpus large_core
+    tag { reads }
 
-//miRDeep2.pl reads.fa /sb/project/hpt-060-aa/BrugiaSRNA/Genome/b_malayi.fa reads_vs_genome.arf /sb/project/hpt-060-aa/BrugiaSRNA/miRbase/brugia_mature.fa /sb/project/hpt-060-aa/BrugiaSRNA/miRbase/othernema_mature.fa /sb/project/hpt-060-aa/BrugiaSRNA/miRbase/brugia_precursors.fa -P
+    input:
+        file reads from fq_trim4
+        file("${fa_prefix}_map.arf") from reads_vs_genome_arf
+        file("reference.fa.gz") from reference_mirdeep
 
-// Mirdeep2 mapper
-// process mirDeep2_mapper {
-//     cpus large_core
-//     tag { reads }
+    output:
 
-//     input:
-//         file reads from fq_trim3
-//         file bowtieindex from bowtie_indices.first()
+    script:
+        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
 
-//     output:
-
-//     script:
-//         fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
-
-//         """
-//         miRdeep2.pl ${reads} ${bowtieindex} reads_vs_genome.arf ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
-//         """
-// }
+        """
+        zcat reference.fa.gz > reference.fa
+        miRdeep2.pl ${reads} reference.fa ${fa_prefix}_map.arf ${as_miRNAs_mature} ${ce_miRNAs_mature} ${as_miRNAs_prec} -P
+        """
+}
 
 
 
