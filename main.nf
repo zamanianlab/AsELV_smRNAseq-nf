@@ -234,7 +234,6 @@ process mirDeep2_pl {
     output:
 
     script:
-        fa_prefix = reads[0].toString() - ~/(_trim)(\.fq\.gz)$/
 
         """
         zcat reference.fa.gz > reference.fa
